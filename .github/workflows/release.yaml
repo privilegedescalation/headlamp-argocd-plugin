@@ -1,0 +1,24 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 1.0.0)'
+        required: true
+        type: string
+  repository_dispatch:
+    types: [release]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    uses: privilegedescalation/.github/.github/workflows/plugin-release.yaml@main
+    secrets:
+      RELEASE_APP_ID: ${{ secrets.RELEASE_APP_ID }}
+      RELEASE_APP_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+    with:
+      version: ${{ inputs.version || github.event.client_payload.version }}

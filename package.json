@@ -1,0 +1,18 @@
+{
+  "name": "headlamp-argocd",
+  "version": "0.1.0",
+  "description": "Headlamp plugin for ArgoCD visibility",
+  "license": "Apache-2.0",
+  "keywords": ["headlamp", "argocd", "kubernetes", "gitops"],
+  "scripts": {
+    "build": "headlamp-plugin build",
+    "lint": "headlamp-plugin lint",
+    "tsc": "headlamp-plugin tsc",
+    "format:check": "headlamp-plugin format:check",
+    "test": "headlamp-plugin test",
+    "package": "headlamp-plugin package"
+  },
+  "devDependencies": {
+    "@kinvolk/headlamp-plugin": "^0.26.0"
+  }
+}

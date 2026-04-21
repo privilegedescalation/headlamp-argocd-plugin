@@ -1,0 +1,35 @@
+version: "0.1.0"
+name: headlamp-argocd
+displayName: ArgoCD Headlamp Plugin
+createdAt: "2026-04-21T00:00:00Z"
+description: >-
+  Headlamp plugin for ArgoCD visibility. Monitors ArgoCD Applications,
+  Rollouts, and health status. Read-only — no cluster write operations.
+license: Apache-2.0
+homeURL: https://github.com/privilegedescalation/headlamp-argocd-plugin
+appVersion: "0.1.0"
+keywords:
+  - argocd
+  - argoproj
+  - headlamp
+  - kubernetes
+  - gitops
+  - continuous-delivery
+links:
+  - name: Source
+    url: https://github.com/privilegedescalation/headlamp-argocd-plugin
+  - name: ArgoCD
+    url: https://argo-cd.readthedocs.io/
+maintainers:
+  - name: privilegedescalation
+    email: chris@farhood.org
+provider:
+  name: privilegedescalation
+annotations:
+  headlamp/plugin/archive-url: "https://github.com/privilegedescalation/headlamp-argocd-plugin/releases/download/v0.1.0/headlamp-argocd-0.1.0.tar.gz"
+  headlamp/plugin/archive-checksum: "sha256:REPLACE_WITH_ACTUAL_CHECKSUM"
+  headlamp/plugin/version-compat: ">=0.26"
+  headlamp/plugin/distro-compat: "in-cluster"
+changes:
+  - kind: added
+    description: "Initial v0.1.0 release"
