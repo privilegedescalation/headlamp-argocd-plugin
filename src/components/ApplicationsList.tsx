@@ -11,7 +11,7 @@ import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import React, { useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { ArgoCDApplication, ArgoCDApplicationsList } from "../api/argocd";
 
 // --- Types ---
@@ -165,7 +165,9 @@ export default function ApplicationsList() {
   const columns = [
     {
       label: "App Name",
-      getter: (row: ApplicationRow) => row.name,
+      getter: (row: ApplicationRow) => (
+        <Link to={`/argocd/applications/${row.name}`}>{row.name}</Link>
+      ),
     },
     {
       label: "Namespace",

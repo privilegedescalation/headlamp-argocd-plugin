@@ -7,6 +7,7 @@ import {
   StatusLabel,
 } from "@kinvolk/headlamp-plugin/lib/CommonComponents";
 import React from "react";
+import ApplicationDetail from "./components/ApplicationDetail";
 import ApplicationsList from "./components/ApplicationsList";
 
 // --- Error boundary for plugin components ---
@@ -65,6 +66,17 @@ registerRoute({
   component: () => (
     <ArgoCDErrorBoundary>
       <ApplicationsList />
+    </ArgoCDErrorBoundary>
+  ),
+});
+
+registerRoute({
+  path: "/argocd/applications/:name",
+  sidebar: "argocd-overview",
+  name: "argocd-application-detail",
+  component: () => (
+    <ArgoCDErrorBoundary>
+      <ApplicationDetail />
     </ArgoCDErrorBoundary>
   ),
 });
