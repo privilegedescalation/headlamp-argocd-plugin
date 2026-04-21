@@ -1,12 +1,12 @@
 import {
   registerRoute,
   registerSidebarEntry,
-} from "@kinvolk/headlamp-plugin/lib";
+} from '@kinvolk/headlamp-plugin/lib';
 import {
   SectionBox,
   StatusLabel,
-} from "@kinvolk/headlamp-plugin/lib/CommonComponents";
-import React from "react";
+} from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import React from 'react';
 
 // --- Error boundary for plugin components ---
 
@@ -52,26 +52,26 @@ function ArgoCDStubView() {
 
 registerSidebarEntry({
   parent: null,
-  name: "argocd",
-  label: "ArgoCD",
-  url: "/argocd",
-  icon: "mdi:git",
+  name: 'argocd',
+  label: 'ArgoCD',
+  url: '/argocd',
+  icon: 'mdi:git',
 });
 
 registerSidebarEntry({
-  parent: "argocd",
-  name: "argocd-overview",
-  label: "Applications",
-  url: "/argocd",
-  icon: "mdi:view-list",
+  parent: 'argocd',
+  name: 'argocd-overview',
+  label: 'Applications',
+  url: '/argocd',
+  icon: 'mdi:view-list',
 });
 
 // --- Routes ---
 
 registerRoute({
-  path: "/argocd",
-  sidebar: "argocd-overview",
-  name: "argocd",
+  path: '/argocd',
+  sidebar: 'argocd-overview',
+  name: 'argocd',
   exact: true,
   component: () => (
     <ArgoCDErrorBoundary>
