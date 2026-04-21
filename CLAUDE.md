@@ -32,12 +32,12 @@ All tests and `pnpm tsc` must pass before committing.
 
 ```
 src/
-├── index.tsx               # Plugin entry: registerRoute, registerSidebarEntry; ArgoCDErrorBoundary
-├── test-utils.tsx          # Shared test fixtures
+├── index.tsx                    # Plugin entry: registerRoute, registerSidebarEntry; ArgoCDErrorBoundary
+├── test-utils.tsx               # Shared test fixtures
 ├── api/
-│   └── argocd.ts           # ArgoCD API types, ApiProxy request helpers
+│   └── argocd.ts                # ArgoCD API types (Application, ApplicationsList)
 └── components/
-    └── ArgoCDStubView.tsx  # Placeholder Applications List view
+    └── ApplicationsList.tsx     # ArgoCD Applications List view with health/sync badges and filters
 ```
 
 ## Code conventions
