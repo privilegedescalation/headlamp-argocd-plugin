@@ -7,6 +7,7 @@ import {
   StatusLabel,
 } from "@kinvolk/headlamp-plugin/lib/CommonComponents";
 import React from "react";
+import ApplicationsList from "./components/ApplicationsList";
 
 // --- Error boundary for plugin components ---
 
@@ -36,18 +37,6 @@ class ArgoCDErrorBoundary extends React.Component<
   }
 }
 
-// --- Stub Applications List View ---
-
-function ArgoCDStubView() {
-  return (
-    <SectionBox title="ArgoCD Applications">
-      <StatusLabel status="info">
-        Plugin scaffold — features coming soon.
-      </StatusLabel>
-    </SectionBox>
-  );
-}
-
 // --- Sidebar entry ---
 
 registerSidebarEntry({
@@ -75,7 +64,7 @@ registerRoute({
   exact: true,
   component: () => (
     <ArgoCDErrorBoundary>
-      <ArgoCDStubView />
+      <ApplicationsList />
     </ArgoCDErrorBoundary>
   ),
 });
