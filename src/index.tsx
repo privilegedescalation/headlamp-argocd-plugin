@@ -9,6 +9,7 @@ import {
 import React from "react";
 import ApplicationDetail from "./components/ApplicationDetail";
 import ApplicationsList from "./components/ApplicationsList";
+import "./components/PageInjections"; // side-effect: registers detail view sections
 
 // --- Error boundary for plugin components ---
 
