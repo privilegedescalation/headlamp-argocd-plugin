@@ -1,7 +1,4 @@
-import React from 'react';
-import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
-import '@testing-library/jest-dom';
+import { describe, expect, it } from 'vitest';
 
 /**
  * Minimal test to verify the plugin index module loads without throwing.
