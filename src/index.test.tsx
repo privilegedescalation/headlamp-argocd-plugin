@@ -8,3 +8,4 @@ describe("ArgoCD Plugin Scaffold", () => {
     expect(true).toBe(true);
   });
 });
+
