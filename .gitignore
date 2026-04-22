@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.pnp/
+.pnp.js
+*.log
+*.tgz
+.DS_Store
+.env
+.env.local
+coverage/
+.nyc_output/
+.cache/
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
