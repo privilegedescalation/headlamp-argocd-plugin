@@ -1,18 +1,60 @@
 {
-  "name": "headlamp-argocd",
+  "name": "@privilegedescalation/headlamp-argocd-plugin",
   "version": "0.1.0",
-  "description": "Headlamp plugin for ArgoCD visibility",
+  "description": "Headlamp plugin for ArgoCD visibility — monitors ArgoCD Applications, Rollouts, and health status",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/privilegedescalation/headlamp-argocd-plugin.git"
+  },
+  "bugs": {
+    "url": "https://github.com/privilegedescalation/headlamp-argocd-plugin/issues"
+  },
+  "homepage": "https://github.com/privilegedescalation/headlamp-argocd-plugin#readme",
+  "author": "privilegedescalation",
   "license": "Apache-2.0",
-  "keywords": ["headlamp", "argocd", "kubernetes", "gitops"],
+  "packageManager": "pnpm@10.32.1",
   "scripts": {
+    "start": "headlamp-plugin start",
     "build": "headlamp-plugin build",
-    "lint": "headlamp-plugin lint",
-    "tsc": "headlamp-plugin tsc",
-    "format:check": "headlamp-plugin format:check",
-    "test": "headlamp-plugin test",
-    "package": "headlamp-plugin package"
+    "package": "headlamp-plugin package",
+    "tsc": "tsc --noEmit",
+    "lint": "eslint --ext .ts,.tsx src/",
+    "lint:fix": "eslint --ext .ts,.tsx --fix src/",
+    "format": "prettier --write src/",
+    "format:check": "prettier --check src/",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "tar": "^7.5.11",
+      "undici": "^7.24.3",
+      "flatted": "^3.4.2"
+    }
   },
   "devDependencies": {
-    "@kinvolk/headlamp-plugin": "^0.26.0"
+    "@kinvolk/headlamp-plugin": "^0.13.0",
+    "@mui/material": "^5.15.14",
+    "@testing-library/jest-dom": "^6.4.8",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitest/coverage-v8": "^3.2.4",
+    "@headlamp-k8s/eslint-config": "^0.6.0",
+    "eslint": "^8.57.0",
+    "jsdom": "^24.0.0",
+    "prettier": "^2.8.8",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^5.3.0",
+    "tar": "^7.5.11",
+    "typescript": "~5.6.2",
+    "undici": "^7.24.3",
+    "vitest": "^3.0.5"
   }
 }
