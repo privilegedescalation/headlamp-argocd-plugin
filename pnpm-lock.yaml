@@ -6235,7 +6235,7 @@ snapshots:
       jsdom: 24.1.3
       jsonpath-plus: 10.4.0
       lodash: 4.18.1
-      material-react-table: 2.13.3(330725fe5432f245d076f0c0dda1a7a7)
+      material-react-table: 2.13.3(0078ddeddc9e779fa84c03996c1db10e)
       monaco-editor: 0.52.2
       msw: 2.4.9(typescript@5.6.2)
       msw-storybook-addon: 2.0.3(msw@2.4.9(typescript@5.6.3))
@@ -9937,7 +9937,7 @@ snapshots:
       '@types/minimatch': 3.0.5
       minimatch: 3.1.5
 
-  material-react-table@2.13.3(330725fe5432f245d076f0c0dda1a7a7):
+  material-react-table@2.13.3(0078ddeddc9e779fa84c03996c1db10e):
     dependencies:
       '@emotion/react': 11.14.0(@types/react@18.3.28)(react@18.3.1)
       '@emotion/styled': 11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@18.3.1))(@types/react@18.3.28)(react@18.3.1)
