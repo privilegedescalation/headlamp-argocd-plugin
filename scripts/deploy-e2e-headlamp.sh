@@ -14,10 +14,37 @@ if [ ! -d "$DIST_DIR" ]; then
 fi
 
 echo "Checking RBAC permissions in namespace '${E2E_NAMESPACE}'..."
-if ! kubectl auth can-i delete configmaps -n "$E2E_NAMESPACE" --quiet 2>/dev/null; then
-  echo "ERROR: Missing RBAC — cannot delete configmaps in namespace '${E2E_NAMESPACE}'." >&2
+REQUIRED_PERMS=(
+  "create configmaps"
+  "delete configmaps"
+  "get configmaps"
+  "create serviceaccounts"
+  "delete serviceaccounts"
+  "get serviceaccounts"
+  "create deployments"
+  "get deployments"
+  "list pods"
+  "get pods"
+  "create services"
+  "get services"
+  "delete services"
+  "create pods/exec"
+  "create token"
+)
+FAILED=""
+for perm in "${REQUIRED_PERMS[@]}"; do
+  if ! kubectl auth can-i "$perm" -n "$E2E_NAMESPACE" --quiet 2>/dev/null; then
+    echo "ERROR: Missing RBAC — ${perm} in namespace '${E2E_NAMESPACE}'." >&2
+    FAILED="$perm"
+    break
+  fi
+done
+if [ -n "$FAILED" ]; then
+  echo "ERROR: Missing required RBAC permission: ${FAILED}" >&2
+  echo "Hub operator needs to grant this permission to the workflow's service account in namespace ${E2E_NAMESPACE}." >&2
   exit 1
 fi
+echo "RBAC check passed."
 
 echo "=== E2E Headlamp Deployment ==="
 echo "  Image:     ghcr.io/headlamp-k8s/headlamp:${HEADLAMP_VERSION}"
@@ -134,8 +161,17 @@ spec:
 EOF
 
 echo "Waiting for rollout..."
-kubectl rollout status "deployment/${E2E_RELEASE}" \
-  -n "$E2E_NAMESPACE" --timeout=120s
+if ! kubectl rollout status "deployment/${E2E_RELEASE}" \
+  -n "$E2E_NAMESPACE" --timeout=120s 2>&1; then
+  echo "=== Rollout failed. Dumping diagnostics ===" >&2
+  echo "=== Pods ===" >&2
+  kubectl get pods -n "$E2E_NAMESPACE" -l "app.kubernetes.io/instance=${E2E_RELEASE}" 2>&1 || true
+  echo "=== Pod events ===" >&2
+  kubectl describe pods -n "$E2E_NAMESPACE" -l "app.kubernetes.io/instance=${E2E_RELEASE}" 2>&1 | tail -30 || true
+  echo "=== Namespace events ===" >&2
+  kubectl get events -n "$E2E_NAMESPACE" --sort-by='.lastTimestamp' 2>&1 | tail -20 || true
+  exit 1
+fi
 
 SVC_URL="http://${E2E_RELEASE}.${E2E_NAMESPACE}.svc.cluster.local"
 
@@ -146,6 +182,14 @@ MAX_ATTEMPTS=24
 until curl -sf --max-time 5 "${SVC_URL}" -o /dev/null 2>/dev/null; do
   ATTEMPTS=$((ATTEMPTS + 1))
   if [ "$ATTEMPTS" -ge "$MAX_ATTEMPTS" ]; then
+    echo ""
+    echo "=== Service unreachable after $((MAX_ATTEMPTS * 5))s. Dumping diagnostics ===" >&2
+    echo "=== Pod state ===" >&2
+    kubectl get pods -n "$E2E_NAMESPACE" -l "app.kubernetes.io/instance=${E2E_RELEASE}" 2>&1 || true
+    echo "=== Pod logs ===" >&2
+    kubectl logs -n "$E2E_NAMESPACE" -l "app.kubernetes.io/instance=${E2E_RELEASE}" --tail=50 2>&1 || true
+    echo "=== Namespace events ===" >&2
+    kubectl get events -n "$E2E_NAMESPACE" --sort-by='.lastTimestamp' 2>&1 | tail -20 || true
     echo "ERROR: ${SVC_URL} not reachable after $((MAX_ATTEMPTS * 5))s" >&2
     exit 1
   fi
