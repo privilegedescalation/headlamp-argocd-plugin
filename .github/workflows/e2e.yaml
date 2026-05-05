@@ -88,6 +88,9 @@ jobs:
       - name: Build plugin
         run: npx @kinvolk/headlamp-plugin build
 
+      - name: Make scripts executable
+        run: chmod +x scripts/deploy-e2e-headlamp.sh scripts/teardown-e2e-headlamp.sh
+
       - name: Deploy E2E Headlamp instance
         run: scripts/deploy-e2e-headlamp.sh
 
