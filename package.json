@@ -23,20 +23,12 @@
     "format": "prettier --write src/",
     "format:check": "prettier --check src/",
     "test": "vitest run",
-    "test:watch": "vitest"
-  },
-  "peerDependencies": {
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0"
-  },
-  "pnpm": {
-    "overrides": {
-      "tar": "^7.5.11",
-      "undici": "^7.24.3",
-      "flatted": "^3.4.2"
-    }
+"test:watch": "vitest",
+    "e2e": "playwright test",
+    "e2e:headed": "playwright test --headed"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@kinvolk/headlamp-plugin": "^0.13.0",
     "@mui/material": "^5.15.14",
     "@testing-library/jest-dom": "^6.4.8",
