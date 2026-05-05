@@ -15,3 +15,9 @@ coverage/
 *~
 .vscode/
 .idea/
+
+# E2E
+e2e/.auth/
+.env.e2e
+playwright-report/
+test-results/
