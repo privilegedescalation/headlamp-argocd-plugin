@@ -14,10 +14,137 @@ concurrency:
   group: e2e-${{ github.repository }}
   cancel-in-progress: false
 
+env:
+  E2E_NAMESPACE: headlamp-dev
+  E2E_RELEASE: headlamp-e2e-argocd
+  HEADLAMP_VERSION: v0.40.1
+
 jobs:
   e2e:
-    uses: privilegedescalation/.github/.github/workflows/plugin-e2e.yaml@hugh/add-pnpm-support-plugin-e2e
-    with:
-      node-version: "22"
-      headlamp-version: v0.40.1
-      e2e-namespace: headlamp-dev
+    runs-on: runners-privilegedescalation
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Detect package manager
+        id: pkg-manager
+        run: |
+          if [ -f "pnpm-lock.yaml" ]; then
+            echo "manager=pnpm" >> $GITHUB_OUTPUT
+            PM=$(python3 -c "import json,sys; d=json.load(open('package.json')); print('true' if d.get('packageManager','').startswith('pnpm@') else 'false')" 2>/dev/null || echo "false")
+            echo "has_package_manager=$PM" >> $GITHUB_OUTPUT
+          else
+            echo "manager=npm" >> $GITHUB_OUTPUT
+            echo "has_package_manager=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: ${{ steps.pkg-manager.outputs.manager == 'npm' && 'npm' || '' }}
+
+      - name: Setup pnpm (Corepack, respects packageManager field)
+        if: steps.pkg-manager.outputs.manager == 'pnpm' && steps.pkg-manager.outputs.has_package_manager == 'true'
+        run: |
+          npm install -g corepack
+          corepack enable pnpm
+          corepack prepare $(node -p "require('./package.json').packageManager") --activate
+
+      - name: Setup pnpm (version latest, no packageManager field)
+        if: steps.pkg-manager.outputs.manager == 'pnpm' && steps.pkg-manager.outputs.has_package_manager == 'false'
+        uses: pnpm/action-setup@v5
+        with:
+          run_install: false
+          version: latest
+
+      - name: Get pnpm store directory
+        id: pnpm-store
+        if: steps.pkg-manager.outputs.manager == 'pnpm'
+        run: echo "dir=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        if: steps.pkg-manager.outputs.manager == 'pnpm'
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm-store.outputs.dir }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Install dependencies
+        run: |
+          if [ "${{ steps.pkg-manager.outputs.manager }}" = "pnpm" ]; then
+            pnpm install --frozen-lockfile
+          else
+            npm ci
+          fi
+
+      - name: Build plugin
+        run: npx @kinvolk/headlamp-plugin build
+
+      - name: Deploy E2E Headlamp instance
+        run: scripts/deploy-e2e-headlamp.sh
+
+      - name: Load E2E environment
+        run: |
+          if [ -f .env.e2e ]; then
+            cat .env.e2e >> "$GITHUB_ENV"
+          else
+            echo "::error::deploy-e2e-headlamp.sh did not produce .env.e2e"
+            exit 1
+          fi
+
+      - name: Install Playwright browsers
+        run: |
+          if [ "${{ steps.pkg-manager.outputs.manager }}" = "pnpm" ]; then
+            pnpm exec playwright install --with-deps chromium
+          else
+            npx playwright install --with-deps chromium
+          fi
+
+      - name: Run E2E tests
+        run: |
+          if [ "${{ steps.pkg-manager.outputs.manager }}" = "pnpm" ]; then
+            pnpm run e2e
+          else
+            npm run e2e
+          fi
+        env:
+          HEADLAMP_URL: ${{ env.HEADLAMP_URL }}
+          HEADLAMP_TOKEN: ${{ env.HEADLAMP_TOKEN }}
+
+      - name: Collect deployment diagnostics on failure
+        if: failure()
+        run: |
+          echo "=== Pod state ==="
+          kubectl get pods -n "$E2E_NAMESPACE" -l "app.kubernetes.io/instance=$E2E_RELEASE" 2>&1 || true
+          echo "=== Pod describe ==="
+          kubectl describe pods -n "$E2E_NAMESPACE" -l "app.kubernetes.io/instance=$E2E_RELEASE" 2>&1 || true
+          echo "=== Recent namespace events ==="
+          kubectl get events -n "$E2E_NAMESPACE" --sort-by='.lastTimestamp' 2>&1 | tail -20 || true
+
+      - name: Teardown E2E instance
+        if: always()
+        run: scripts/teardown-e2e-headlamp.sh
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: test-results
+          path: test-results/
+          retention-days: 7
