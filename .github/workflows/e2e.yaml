@@ -1,0 +1,95 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.repository }}
+  cancel-in-progress: false
+
+env:
+  E2E_NAMESPACE: headlamp-dev
+  E2E_RELEASE: headlamp-e2e-argocd
+  HEADLAMP_VERSION: v0.40.1
+
+jobs:
+  e2e:
+    runs-on: runners-privilegedescalation
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build plugin
+        run: npx @kinvolk/headlamp-plugin build
+
+      - name: Deploy E2E Headlamp instance
+        run: scripts/deploy-e2e-headlamp.sh
+
+      - name: Load E2E environment
+        run: |
+          if [ -f .env.e2e ]; then
+            cat .env.e2e >> "$GITHUB_ENV"
+          else
+            echo "::error::deploy-e2e-headlamp.sh did not produce .env.e2e"
+            exit 1
+          fi
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: npm run e2e
+        env:
+          HEADLAMP_URL: ${{ env.HEADLAMP_URL }}
+          HEADLAMP_TOKEN: ${{ env.HEADLAMP_TOKEN }}
+
+      - name: Collect deployment diagnostics on failure
+        if: failure()
+        run: |
+          echo "=== Pod state ==="
+          kubectl get pods -n "$E2E_NAMESPACE" -l "app.kubernetes.io/instance=$E2E_RELEASE" 2>&1 || true
+          echo "=== Pod describe ==="
+          kubectl describe pods -n "$E2E_NAMESPACE" -l "app.kubernetes.io/instance=$E2E_RELEASE" 2>&1 || true
+          echo "=== Recent namespace events ==="
+          kubectl get events -n "$E2E_NAMESPACE" --sort-by='.lastTimestamp' 2>&1 | tail -20 || true
+
+      - name: Teardown E2E instance
+        if: always()
+        run: scripts/teardown-e2e-headlamp.sh
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: test-results
+          path: test-results/
+          retention-days: 7
