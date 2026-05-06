@@ -88,7 +88,7 @@ spec:
         app.kubernetes.io/instance: ${E2E_RELEASE}
     spec:
       serviceAccountName: ${E2E_RELEASE}
-      automountServiceAccountToken: false
+      automountServiceAccountToken: true
       securityContext: {}
       containers:
         - name: headlamp
