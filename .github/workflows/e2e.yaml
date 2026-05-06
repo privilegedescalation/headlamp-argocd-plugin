@@ -132,7 +132,7 @@ jobs:
       - name: Apply RBAC for E2E pipeline
         run: |
           set -x
-          kubectl apply -f deployment/e2e-ci-runner-rbac.yaml
+          kubectl apply -f deployment/e2e-ci-runner-rbac.yaml --namespace=headlamp-dev
           echo "Waiting for RBAC propagation..."
           sleep 5
           kubectl get role e2e-ci-runner -n headlamp-dev
