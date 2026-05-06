@@ -10,6 +10,9 @@ on:
 permissions:
   contents: read
 
+# Only one E2E run at a time — the shared E2E_RELEASE in headlamp-dev cannot
+# be shared across concurrent runs. cancel-in-progress: false queues rather
+# than cancels to avoid skipping the teardown step.
 concurrency:
   group: e2e-${{ github.repository }}
   cancel-in-progress: false
@@ -76,6 +79,65 @@ jobs:
 
       - name: Setup kubectl
         uses: azure/setup-kubectl@v4
+        with:
+          version: 'latest'
+
+      - name: Get kubeconfig
+        run: |
+          set -euo pipefail
+          echo "=== Runner kubeconfig diagnostic ==="
+          echo "KUBECONFIG=${KUBECONFIG:-}"
+          for path in /runner/config /home/runner/.kube/config "${HOME:-}/.kube/config"; do
+            if [ -f "$path" ]; then
+              echo "FOUND kubeconfig at: $path"
+            fi
+          done
+          echo ""
+          echo "=== In-cluster service account check ==="
+          in_cluster=false
+          if [ -f /var/run/secrets/kubernetes.io/serviceaccount/token ]; then
+            echo "Service account token present — in-cluster mode available"
+            in_cluster=true
+          fi
+          if [ -f /runner/config ]; then
+            echo "KUBECONFIG=/runner/config" >> "$GITHUB_ENV"
+          elif [ -f /home/runner/.kube/config ]; then
+            echo "KUBECONFIG=/home/runner/.kube/config" >> "$GITHUB_ENV"
+          elif [ -f "${HOME:-}/.kube/config" ]; then
+            echo "KUBECONFIG=${HOME:-}/.kube/config" >> "$GITHUB_ENV"
+          elif [ "$in_cluster" = true ]; then
+            echo "No static kubeconfig found — generating in-cluster kubeconfig"
+            KUBECFG_DIR="${HOME:-}/.kube"
+            mkdir -p "$KUBECFG_DIR"
+            kubectl config set-cluster in-cluster \
+              --server="https://${KUBERNETES_SERVICE_HOST:-kubernetes.default.svc}:${KUBERNETES_SERVICE_PORT:-443}" \
+              --certificate-authority=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+              --embed-certs=true \
+              --kubeconfig="$KUBECFG_DIR/config"
+            kubectl config set-credentials in-cluster \
+              --token="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
+              --kubeconfig="$KUBECFG_DIR/config"
+            kubectl config set-context in-cluster \
+              --cluster=in-cluster \
+              --user=in-cluster \
+              --kubeconfig="$KUBECFG_DIR/config"
+            kubectl config use-context in-cluster \
+              --kubeconfig="$KUBECFG_DIR/config"
+            echo "KUBECONFIG=$KUBECFG_DIR/config" >> "$GITHUB_ENV"
+          else
+            echo "::error::No kubeconfig found"
+            exit 1
+          fi
+
+      - name: Apply RBAC for E2E pipeline
+        run: |
+          set -x
+          kubectl apply -f deployment/e2e-ci-runner-rbac.yaml
+          echo "Waiting for RBAC propagation..."
+          sleep 5
+          kubectl get role e2e-ci-runner -n headlamp-dev
+          kubectl get rolebinding e2e-ci-runner-binding -n headlamp-dev 2>&1 | tail -3 || true
+          set +x
 
       - name: Install dependencies
         run: |
@@ -126,6 +188,12 @@ jobs:
           kubectl get pods -n "$E2E_NAMESPACE" -l "app.kubernetes.io/instance=$E2E_RELEASE" 2>&1 || true
           echo "=== Pod describe ==="
           kubectl describe pods -n "$E2E_NAMESPACE" -l "app.kubernetes.io/instance=$E2E_RELEASE" 2>&1 || true
+          echo "=== Container logs (current) ==="
+          kubectl logs -n "$E2E_NAMESPACE" -l "app.kubernetes.io/instance=$E2E_RELEASE" \
+            --tail=100 2>&1 || true
+          echo "=== Container logs (previous, if crashed) ==="
+          kubectl logs -n "$E2E_NAMESPACE" -l "app.kubernetes.io/instance=$E2E_RELEASE" \
+            --previous --tail=100 2>&1 || true
           echo "=== Recent namespace events ==="
           kubectl get events -n "$E2E_NAMESPACE" --sort-by='.lastTimestamp' 2>&1 | tail -20 || true
 

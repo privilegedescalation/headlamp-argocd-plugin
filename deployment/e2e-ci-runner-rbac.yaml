@@ -1,0 +1,36 @@
+---
+# RBAC for the GitHub Actions CI runner to manage the E2E Headlamp instance.
+# CI-only test fixture — NOT for production use.
+#
+# Grants the ARC runner service account permissions in the headlamp-dev
+# namespace to deploy and tear down a dedicated Headlamp instance.
+# E2E resources run in `headlamp-dev` — nothing persists beyond a test run.
+#
+# Plugin is loaded via ConfigMap volume mount — no custom Docker images.
+#
+# Note: This RBAC is mirrored in privilegedescalation/infra (base/rbac/)
+# and managed by Flux GitOps. The infra repo is the source of truth.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: e2e-ci-runner
+  namespace: headlamp-dev
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
+  - apiGroups: [""]
+    resources: ["services", "serviceaccounts", "configmaps", "secrets", "events"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["serviceaccounts/token"]
+    verbs: ["create"]
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["roles", "rolebindings"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
