@@ -1,6 +1,6 @@
 # Artifact Hub repository metadata
 # https://artifacthub.io/docs/topics/repositories/#repository-metadata-file
-repositoryID: ""
+repositoryID: "3648e8a8-54f7-474c-9977-00ec3b4ea1e1"
 owners:
   - name: privilegedescalation
     email: chris@farhood.org
