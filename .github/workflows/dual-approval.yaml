@@ -16,7 +16,6 @@ jobs:
     name: Promotion Gate
     runs-on: ubuntu-latest
     container: ubuntu:latest
-    container: ubuntu:latest
     timeout-minutes: 5
 
     steps:
