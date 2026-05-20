@@ -32,4 +32,4 @@ annotations:
   headlamp/plugin/distro-compat: "in-cluster"
 changes:
   - kind: fixed
-    description: "Point archive URLs from GitHub to Gitea releases; bump version to v0.1.3"
+    description: "Fix archive URL to point to GitHub v0.1.3 release and bump version"
