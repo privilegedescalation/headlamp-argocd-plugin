@@ -6,6 +6,19 @@ on:
   pull_request:
     branches: [main, dev, uat]
   workflow_dispatch:
+    inputs:
+      node-version:
+        description: 'Node.js version to use'
+        required: false
+        type: string
+        default: '22'
+  workflow_call:
+    inputs:
+      node-version:
+        description: 'Node.js version to use'
+        required: false
+        type: string
+        default: '22'
 
 permissions:
   contents: read
@@ -87,7 +100,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: ${{ inputs.node-version || '22' }}
           cache: ${{ steps.pkg-manager.outputs.manager == 'npm' && 'npm' || '' }}
 
       - name: Setup pnpm (via Corepack, reads version from packageManager field)
