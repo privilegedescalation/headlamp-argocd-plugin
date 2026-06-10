@@ -13,6 +13,7 @@ import Select from "@mui/material/Select";
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ArgoCDApplication, ArgoCDApplicationsList } from "../api/argocd";
+import { useArgoCDConfig } from "../config";
 
 // --- Types ---
 
@@ -82,13 +83,11 @@ function formatLastSynced(
 
 // --- API ---
 
-const ARGOCD_API_PATH =
-  "/api/v1/namespaces/argocd/services/argocd-server/proxy/api/v1/applications";
-
-async function fetchApplications(): Promise<ArgoCDApplicationsList> {
-  const response = (await ApiProxy.request(
-    ARGOCD_API_PATH
-  )) as ArgoCDApplicationsList;
+async function fetchApplications(
+  namespace: string
+): Promise<ArgoCDApplicationsList> {
+  const path = `/api/v1/namespaces/${namespace}/services/argocd-server/proxy/api/v1/applications`;
+  const response = (await ApiProxy.request(path)) as ArgoCDApplicationsList;
   return response;
 }
 
@@ -96,6 +95,8 @@ async function fetchApplications(): Promise<ArgoCDApplicationsList> {
 
 export default function ApplicationsList() {
   const location = useLocation();
+  const getConfig = useArgoCDConfig();
+  const namespace = getConfig().namespace;
   const [applications, setApplications] = useState<ApplicationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -118,7 +119,7 @@ export default function ApplicationsList() {
     setLoading(true);
     setError(null);
 
-    fetchApplications()
+    fetchApplications(namespace)
       .then((data) => {
         if (cancelled) return;
         const rows: ApplicationRow[] = (data.items ?? []).map((app) => ({
@@ -144,7 +145,7 @@ export default function ApplicationsList() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [namespace]);
 
   const projects = useMemo(() => {
     const set = new Set(applications.map((app) => app.project));
@@ -273,7 +274,7 @@ export default function ApplicationsList() {
             <StatusLabel status="error">ArgoCD not detected</StatusLabel>
             <p>
               Could not reach the ArgoCD server. Ensure ArgoCD is installed in
-              the <code>argocd</code> namespace and the server is reachable.
+              the <code>{namespace}</code> namespace and the server is reachable.
             </p>
             <p>
               <strong>Error:</strong> {error}

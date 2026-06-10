@@ -12,6 +12,7 @@ import {
 import { Link } from "react-router-dom";
 import React, { useEffect, useState } from "react";
 import { ArgoCDApplication, ArgoCDApplicationsList } from "../api/argocd";
+import { useArgoCDConfig } from "../config";
 import {
   healthStatusToColor,
   healthStatusToLabel,
@@ -20,13 +21,11 @@ import {
 
 // --- API ---
 
-const ARGOCD_API_PATH =
-  "/api/v1/namespaces/argocd/services/argocd-server/proxy/api/v1/applications";
-
-async function fetchApplications(): Promise<ArgoCDApplicationsList> {
-  const response = (await ApiProxy.request(
-    ARGOCD_API_PATH
-  )) as ArgoCDApplicationsList;
+async function fetchApplications(
+  namespace: string
+): Promise<ArgoCDApplicationsList> {
+  const path = `/api/v1/namespaces/${namespace}/services/argocd-server/proxy/api/v1/applications`;
+  const response = (await ApiProxy.request(path)) as ArgoCDApplicationsList;
   return response;
 }
 
@@ -34,13 +33,15 @@ async function fetchApplications(): Promise<ArgoCDApplicationsList> {
 
 function NamespaceArgoSection({ resource }: { resource: KubeObject }) {
   const namespaceName = resource.metadata.name;
+  const getConfig = useArgoCDConfig();
+  const argocdNamespace = getConfig().namespace;
   const [apps, setApps] = useState<ArgoCDApplication[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    fetchApplications()
+    fetchApplications(argocdNamespace)
       .then((data) => {
         if (cancelled) return;
         const matched = (data.items ?? []).filter(
@@ -57,7 +58,7 @@ function NamespaceArgoSection({ resource }: { resource: KubeObject }) {
     return () => {
       cancelled = true;
     };
-  }, [namespaceName]);
+  }, [namespaceName, argocdNamespace]);
 
   if (loading) {
     return (
@@ -130,13 +131,15 @@ function NamespaceArgoSection({ resource }: { resource: KubeObject }) {
 
 function DeploymentArgoBadge({ resource }: { resource: KubeObject }) {
   const deploymentName = resource.metadata.name;
+  const getConfig = useArgoCDConfig();
+  const argocdNamespace = getConfig().namespace;
   const [apps, setApps] = useState<ArgoCDApplication[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    fetchApplications()
+    fetchApplications(argocdNamespace)
       .then((data) => {
         if (cancelled) return;
         const matched = (data.items ?? []).filter((app) =>
@@ -155,7 +158,7 @@ function DeploymentArgoBadge({ resource }: { resource: KubeObject }) {
     return () => {
       cancelled = true;
     };
-  }, [deploymentName]);
+  }, [deploymentName, argocdNamespace]);
 
   if (loading || error || !apps || apps.length === 0) {
     return null;

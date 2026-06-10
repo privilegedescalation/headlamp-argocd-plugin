@@ -164,6 +164,11 @@ describe("ApplicationsList filter logic", () => {
 // Mock Headlamp lib
 vi.mock("@kinvolk/headlamp-plugin/lib", () => ({
   ApiProxy: { request: vi.fn() },
+  ConfigStore: class {
+    useConfig() {
+      return () => ({ namespace: "argocd" });
+    }
+  },
 }));
 
 // Mock MUI
