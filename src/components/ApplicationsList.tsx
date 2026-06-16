@@ -274,7 +274,8 @@ export default function ApplicationsList() {
             <StatusLabel status="error">ArgoCD not detected</StatusLabel>
             <p>
               Could not reach the ArgoCD server. Ensure ArgoCD is installed in
-              the <code>{namespace}</code> namespace and the server is reachable.
+              the <code>{namespace}</code> namespace and the server is
+              reachable.
             </p>
             <p>
               <strong>Error:</strong> {error}
