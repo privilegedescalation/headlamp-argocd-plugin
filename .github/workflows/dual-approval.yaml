@@ -24,7 +24,7 @@ jobs:
 
       - name: Check promotion approval
         env:
-          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
           BASE_REF: ${{ github.base_ref }}
@@ -36,14 +36,6 @@ jobs:
 
           echo "Checking promotion gate for PR #${PR_NUMBER} targeting ${BASE_REF} in ${REPO}"
 
-          if [ -z "${BASE_REF}" ] && [ -n "${PR_NUMBER}" ] && [ "${PR_NUMBER}" != "null" ]; then
-            BASE_REF=$(curl -sf \
-              -H "Authorization: token ${GITEA_TOKEN}" \
-              -H "Accept: application/json" \
-              "https://git.farh.net/api/v1/repos/${REPO}/pulls/${PR_NUMBER}" | jq -r '.base.ref')
-            echo "BASE_REF was empty; resolved from PR #${PR_NUMBER} API: ${BASE_REF}"
-          fi
-
           # Determine required reviewer based on target branch
           case "${BASE_REF}" in
             dev)
@@ -51,21 +43,21 @@ jobs:
               exit 0
               ;;
             uat)
-              REQUIRED_REVIEWER="pe_regina"
+              REQUIRED_REVIEWER="regression-regina-pe[bot]"
               GATE_NAME="QA"
               ;;
             main)
-              REQUIRED_REVIEWER="pe_regina"
+              REQUIRED_REVIEWER="regression-regina-pe[bot]"
               GATE_NAME="QA"
               # For plugin repos (Pipeline A), UAT approval is needed for uat→main
               # Check if the source branch is uat
               SOURCE_REF=$(curl -sf \
-                -H "Authorization: token ${GITEA_TOKEN}" \
-                -H "Accept: application/json" \
-                "https://git.farh.net/api/v1/repos/${REPO}/pulls/${PR_NUMBER}" | jq -r '.head.ref')
+                -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+                -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/${REPO}/pulls/${PR_NUMBER}" | jq -r '.head.ref')
 
               if [ "${SOURCE_REF}" = "uat" ]; then
-                REQUIRED_REVIEWER="pe_patty"
+                REQUIRED_REVIEWER="pixel-patty-pe[bot]"
                 GATE_NAME="UAT"
               fi
               ;;
@@ -77,17 +69,17 @@ jobs:
 
           echo "Required reviewer: ${REQUIRED_REVIEWER} (${GATE_NAME})"
 
-          # For uat→main promotions, pe_patty may not be able to review (bot account).
-          # Accept pe_nancy (CTO) as a valid alternative reviewer.
+          # For uat→main promotions, pixel-patty-pe may not be able to review.
+          # Accept null-pointer-nancy-pe (CTO) as a valid alternative reviewer.
           ALT_REVIEWER=""
-          if [ "${REQUIRED_REVIEWER}" = "pe_patty" ]; then
-            ALT_REVIEWER="pe_nancy"
+          if [ "${REQUIRED_REVIEWER}" = "pixel-patty-pe[bot]" ]; then
+            ALT_REVIEWER="null-pointer-nancy-pe[bot]"
           fi
 
           REVIEWS=$(curl -sf \
-            -H "Authorization: token ${GITEA_TOKEN}" \
-            -H "Accept: application/json" \
-            "https://git.farh.net/api/v1/repos/${REPO}/pulls/${PR_NUMBER}/reviews")
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${REPO}/pulls/${PR_NUMBER}/reviews")
 
           if [ -z "${REVIEWS}" ] || [ "${REVIEWS}" = "null" ]; then
             echo "::warning::Could not fetch reviews for PR #${PR_NUMBER}."
