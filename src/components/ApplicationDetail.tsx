@@ -12,6 +12,7 @@ import {
   ArgoCDHealthStatus,
   ArgoCDSyncStatus,
 } from "../api/argocd";
+import { useArgoCDConfig } from "../config";
 import { healthStatusToColor, syncStatusToColor } from "./ApplicationsList";
 
 // --- Types ---
@@ -73,16 +74,13 @@ function formatRevision(revision: string): string {
 
 // --- API ---
 
-const ARGOCD_API_PATH =
-  "/api/v1/namespaces/argocd/services/argocd-server/proxy/api/v1/applications";
-
 async function fetchApplication(
-  name: string
+  name: string,
+  namespace: string
 ): Promise<ArgoCDApplication | null> {
   try {
-    const response = (await ApiProxy.request(
-      `${ARGOCD_API_PATH}/${name}`
-    )) as ArgoCDApplication;
+    const path = `/api/v1/namespaces/${namespace}/services/argocd-server/proxy/api/v1/applications/${name}`;
+    const response = (await ApiProxy.request(path)) as ArgoCDApplication;
     return response;
   } catch {
     return null;
@@ -108,6 +106,8 @@ async function fetchApplicationEvents(
 
 export default function ApplicationDetail() {
   const { name } = useParams<{ name: string }>();
+  const getConfig = useArgoCDConfig();
+  const namespace = getConfig().namespace;
   const [application, setApplication] = useState<ArgoCDApplication | null>(
     null
   );
@@ -122,7 +122,7 @@ export default function ApplicationDetail() {
     setLoading(true);
     setError(null);
 
-    fetchApplication(name)
+    fetchApplication(name, namespace)
       .then((app) => {
         if (cancelled) return;
         if (!app) {
@@ -134,8 +134,8 @@ export default function ApplicationDetail() {
         setLoading(false);
 
         // Fetch events in parallel
-        const namespace = app.metadata?.namespace ?? "argocd";
-        fetchApplicationEvents(namespace, name).then((evts) => {
+        const appNamespace = app.metadata?.namespace ?? namespace;
+        fetchApplicationEvents(appNamespace, name).then((evts) => {
           if (!cancelled) setEvents(evts);
         });
       })
@@ -149,7 +149,7 @@ export default function ApplicationDetail() {
     return () => {
       cancelled = true;
     };
-  }, [name]);
+  }, [name, namespace]);
 
   if (loading) {
     return (
@@ -186,7 +186,7 @@ export default function ApplicationDetail() {
   const targetRevision = application.spec?.targetRevision ?? "—";
   const repoURL = application.spec?.sourceRepoURL ?? "—";
   const project = application.spec?.project ?? "—";
-  const namespace = application.metadata?.namespace ?? "—";
+  const appNamespace = application.metadata?.namespace ?? "—";
 
   // Build resource rows
   const resourceRows: ResourceRow[] = (application.status?.resources ?? []).map(
@@ -287,7 +287,7 @@ export default function ApplicationDetail() {
                 <td>
                   <strong>Namespace:</strong>
                 </td>
-                <td>{namespace}</td>
+                <td>{appNamespace}</td>
               </tr>
               <tr>
                 <td>
