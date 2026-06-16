@@ -17,11 +17,9 @@ export function getArgoCDConfig(): ArgoCDPluginConfig {
 }
 
 export function useArgoCDConfig(): () => ArgoCDPluginConfig {
-  return store.useConfig();
-}
-
-export function argocdApiPath(
-  namespace: string = getArgoCDConfig().namespace
-): string {
-  return `/api/v1/namespaces/${namespace}/services/argocd-server/proxy/api/v1/applications`;
+  const getConfig = store.useConfig();
+  return () => {
+    const data = getConfig();
+    return { namespace: data?.namespace || ARGOCD_DEFAULT_NAMESPACE };
+  };
 }

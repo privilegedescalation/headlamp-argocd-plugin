@@ -114,4 +114,21 @@ describe("ArgoCDSettings", () => {
       namespace: "argo-cd-prod",
     });
   });
+
+  it("trims whitespace from the namespace value on change", () => {
+    onDataChange.mockClear();
+    render(
+      <ArgoCDSettings
+        onDataChange={onDataChange}
+        data={{ namespace: "argocd" }}
+      />
+    );
+
+    const input = screen.getByTestId("namespace-input") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "  argo-cd-prod  " } });
+
+    expect(onDataChange).toHaveBeenCalledWith({
+      namespace: "argo-cd-prod",
+    });
+  });
 });

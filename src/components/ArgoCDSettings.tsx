@@ -19,7 +19,7 @@ export function ArgoCDSettings(props: PluginSettingsDetailsProps) {
   const handleNamespaceChange = (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    onDataChange?.({ ...config, namespace: event.target.value });
+    onDataChange?.({ ...config, namespace: event.target.value.trim() });
   };
 
   const settingsRows = [
