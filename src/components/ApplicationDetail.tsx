@@ -12,7 +12,7 @@ import {
   ArgoCDHealthStatus,
   ArgoCDSyncStatus,
 } from "../api/argocd";
-import { useArgoCDConfig } from "../config";
+import { buildArgoCDProxyPath, useArgoCDConfig } from "../config";
 import { healthStatusToColor, syncStatusToColor } from "./ApplicationsList";
 
 // --- Types ---
@@ -76,10 +76,10 @@ function formatRevision(revision: string): string {
 
 async function fetchApplication(
   name: string,
-  namespace: string
+  proxyPath: string
 ): Promise<ArgoCDApplication | null> {
   try {
-    const path = `/api/v1/namespaces/${namespace}/services/argocd-server/proxy/api/v1/applications/${name}`;
+    const path = `${proxyPath}/${name}`;
     const response = (await ApiProxy.request(path)) as ArgoCDApplication;
     return response;
   } catch {
@@ -107,7 +107,9 @@ async function fetchApplicationEvents(
 export default function ApplicationDetail() {
   const { name } = useParams<{ name: string }>();
   const getConfig = useArgoCDConfig();
-  const namespace = getConfig().namespace;
+  const config = getConfig();
+  const namespace = config.namespace;
+  const proxyPath = buildArgoCDProxyPath(config);
   const [application, setApplication] = useState<ArgoCDApplication | null>(
     null
   );
@@ -122,7 +124,7 @@ export default function ApplicationDetail() {
     setLoading(true);
     setError(null);
 
-    fetchApplication(name, namespace)
+    fetchApplication(name, proxyPath)
       .then((app) => {
         if (cancelled) return;
         if (!app) {
@@ -149,7 +151,7 @@ export default function ApplicationDetail() {
     return () => {
       cancelled = true;
     };
-  }, [name, namespace]);
+  }, [name, proxyPath]);
 
   if (loading) {
     return (

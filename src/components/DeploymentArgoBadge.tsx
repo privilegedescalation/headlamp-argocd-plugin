@@ -5,16 +5,16 @@ import {
 } from "@kinvolk/headlamp-plugin/lib/CommonComponents";
 import React, { useEffect, useState } from "react";
 import { ArgoCDApplication, ArgoCDApplicationsList } from "../api/argocd";
+import { buildArgoCDProxyPath, useArgoCDConfig } from "../config";
 import { syncStatusToColor } from "./ApplicationsList";
 
 // --- API ---
 
-const ARGOCD_API_PATH =
-  "/api/v1/namespaces/argocd/services/argocd-server/proxy/api/v1/applications";
-
-async function fetchApplications(): Promise<ArgoCDApplicationsList> {
+async function fetchApplications(
+  proxyPath: string
+): Promise<ArgoCDApplicationsList> {
   const response = (await ApiProxy.request(
-    ARGOCD_API_PATH
+    proxyPath
   )) as ArgoCDApplicationsList;
   return response;
 }
@@ -45,13 +45,15 @@ interface DeploymentArgoBadgeProps {
 export default function DeploymentArgoBadge({
   deploymentName,
 }: DeploymentArgoBadgeProps) {
+  const getConfig = useArgoCDConfig();
+  const proxyPath = buildArgoCDProxyPath(getConfig());
   const [apps, setApps] = useState<ArgoCDApplication[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    fetchApplications()
+    fetchApplications(proxyPath)
       .then((data) => {
         if (cancelled) return;
         const matched = appsForDeployment(data.items ?? [], deploymentName);
@@ -66,7 +68,7 @@ export default function DeploymentArgoBadge({
     return () => {
       cancelled = true;
     };
-  }, [deploymentName]);
+  }, [deploymentName, proxyPath]);
 
   if (loading || error || !apps || apps.length === 0) {
     return null; // Show nothing when no matching application

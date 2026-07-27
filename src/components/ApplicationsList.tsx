@@ -13,7 +13,7 @@ import Select from "@mui/material/Select";
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ArgoCDApplication, ArgoCDApplicationsList } from "../api/argocd";
-import { useArgoCDConfig } from "../config";
+import { buildArgoCDProxyPath, useArgoCDConfig } from "../config";
 
 // --- Types ---
 
@@ -84,10 +84,9 @@ function formatLastSynced(
 // --- API ---
 
 async function fetchApplications(
-  namespace: string
+  proxyPath: string
 ): Promise<ArgoCDApplicationsList> {
-  const path = `/api/v1/namespaces/${namespace}/services/argocd-server/proxy/api/v1/applications`;
-  const response = (await ApiProxy.request(path)) as ArgoCDApplicationsList;
+  const response = (await ApiProxy.request(proxyPath)) as ArgoCDApplicationsList;
   return response;
 }
 
@@ -96,7 +95,9 @@ async function fetchApplications(
 export default function ApplicationsList() {
   const location = useLocation();
   const getConfig = useArgoCDConfig();
-  const namespace = getConfig().namespace;
+  const config = getConfig();
+  const namespace = config.namespace;
+  const proxyPath = buildArgoCDProxyPath(config);
   const [applications, setApplications] = useState<ApplicationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -119,7 +120,7 @@ export default function ApplicationsList() {
     setLoading(true);
     setError(null);
 
-    fetchApplications(namespace)
+    fetchApplications(proxyPath)
       .then((data) => {
         if (cancelled) return;
         const rows: ApplicationRow[] = (data.items ?? []).map((app) => ({
@@ -145,7 +146,7 @@ export default function ApplicationsList() {
     return () => {
       cancelled = true;
     };
-  }, [namespace]);
+  }, [proxyPath]);
 
   const projects = useMemo(() => {
     const set = new Set(applications.map((app) => app.project));
