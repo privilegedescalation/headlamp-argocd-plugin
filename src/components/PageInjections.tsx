@@ -24,7 +24,9 @@ import {
 async function fetchApplications(
   proxyPath: string
 ): Promise<ArgoCDApplicationsList> {
-  const response = (await ApiProxy.request(proxyPath)) as ArgoCDApplicationsList;
+  const response = (await ApiProxy.request(
+    proxyPath
+  )) as ArgoCDApplicationsList;
   return response;
 }
 

@@ -202,10 +202,7 @@ describe("ArgoCDSettings", () => {
   it("calls onDataChange with the new service port (as number) when the input changes", () => {
     onDataChange.mockClear();
     render(
-      <ArgoCDSettings
-        onDataChange={onDataChange}
-        data={{ servicePort: 443 }}
-      />
+      <ArgoCDSettings onDataChange={onDataChange} data={{ servicePort: 443 }} />
     );
 
     const input = screen.getByTestId("service-port-input") as HTMLInputElement;
@@ -219,10 +216,7 @@ describe("ArgoCDSettings", () => {
   it("ignores non-numeric service port input", () => {
     onDataChange.mockClear();
     render(
-      <ArgoCDSettings
-        onDataChange={onDataChange}
-        data={{ servicePort: 443 }}
-      />
+      <ArgoCDSettings onDataChange={onDataChange} data={{ servicePort: 443 }} />
     );
 
     const input = screen.getByTestId("service-port-input") as HTMLInputElement;

@@ -79,7 +79,9 @@ export function ArgoCDSettings(props: PluginSettingsDetailsProps) {
         <TextField
           fullWidth
           helperText="Port used to reach the ArgoCD server. Default: 443."
-          defaultValue={String(config.servicePort ?? ARGOCD_DEFAULT_SERVICE_PORT)}
+          defaultValue={String(
+            config.servicePort ?? ARGOCD_DEFAULT_SERVICE_PORT
+          )}
           onChange={handleServicePortChange}
           variant="standard"
           inputProps={{ "data-testid": "service-port-input" }}
