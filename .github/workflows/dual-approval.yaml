@@ -102,25 +102,29 @@ jobs:
             exit 1
           fi
 
-          REVIEWS=$(curl -sf \
+          REVIEWS_FILE=$(mktemp)
+          curl -sf \
             -H "Authorization: Bearer ${GITHUB_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${REPO}/pulls/${PR_NUMBER}/reviews")
+            "https://api.github.com/repos/${REPO}/pulls/${PR_NUMBER}/reviews" \
+            > "$REVIEWS_FILE"
 
-          if [ -z "${REVIEWS}" ] || [ "${REVIEWS}" = "null" ]; then
+          if [ ! -s "$REVIEWS_FILE" ]; then
             echo "::warning::Could not fetch reviews for PR #${PR_NUMBER}."
             exit 1
           fi
 
-          REVIEWER_APPROVED=$(printf '%s' "${REVIEWS}" | jq -r --arg user "${REQUIRED_REVIEWER}" \
-            '[.[] | select(.user.login == $user)] | last | if .state then .state == "APPROVED" else false end')
+          REVIEWER_APPROVED=$(jq -r --arg user "${REQUIRED_REVIEWER}" \
+            '[.[] | select(.user.login == $user)] | last | if .state then .state == "APPROVED" else false end' \
+            "$REVIEWS_FILE")
 
           echo "${GATE_NAME} (${REQUIRED_REVIEWER}) approved: ${REVIEWER_APPROVED}"
 
           # Fallback: check if CTO approved as alternative for uat→main
           if [ "${REVIEWER_APPROVED}" != "true" ] && [ -n "${ALT_REVIEWER}" ]; then
-            REVIEWER_APPROVED=$(printf '%s' "${REVIEWS}" | jq -r --arg user "${ALT_REVIEWER}" \
-              '[.[] | select(.user.login == $user)] | last | if .state then .state == "APPROVED" else false end')
+            REVIEWER_APPROVED=$(jq -r --arg user "${ALT_REVIEWER}" \
+              '[.[] | select(.user.login == $user)] | last | if .state then .state == "APPROVED" else false end' \
+              "$REVIEWS_FILE")
             if [ "${REVIEWER_APPROVED}" = "true" ]; then
               echo "CTO (${ALT_REVIEWER}) approved as fallback for UAT gate."
             fi
