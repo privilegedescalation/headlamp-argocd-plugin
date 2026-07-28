@@ -24,7 +24,7 @@ jobs:
 
     steps:
       - name: Install dependencies
-        run: apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates curl jq
+        run: apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates curl jq python3
 
       - name: Check promotion approval
         env:
@@ -88,12 +88,13 @@ jobs:
             ALT_REVIEWER="null-pointer-nancy-pe[bot]"
           fi
 
-          PR_DATA=$(curl -sf \
+          PR_DATA_FILE=$(mktemp)
+          curl -sf \
             -H "Authorization: Bearer ${GITHUB_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${REPO}/pulls/${PR_NUMBER}")
+            "https://api.github.com/repos/${REPO}/pulls/${PR_NUMBER}" > "$PR_DATA_FILE"
 
-          PR_AUTHOR=$(echo "${PR_DATA}" | jq -r '.user.login')
+          PR_AUTHOR=$(python3 -c "import json,re,sys; raw=open(sys.argv[1],'rb').read(); raw=re.sub(b'[\x00-\x1f]',b'',raw); print(json.loads(raw).get('user',{}).get('login',''))" "$PR_DATA_FILE")
           echo "PR author: ${PR_AUTHOR}"
 
           # Guard: PR author matches required reviewer — gate cannot be satisfied.
@@ -102,25 +103,33 @@ jobs:
             exit 1
           fi
 
-          REVIEWS=$(curl -sf \
+          REVIEWS_FILE=$(mktemp)
+          curl -sf \
             -H "Authorization: Bearer ${GITHUB_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${REPO}/pulls/${PR_NUMBER}/reviews")
+            "https://api.github.com/repos/${REPO}/pulls/${PR_NUMBER}/reviews" \
+            > "$REVIEWS_FILE"
 
-          if [ -z "${REVIEWS}" ] || [ "${REVIEWS}" = "null" ]; then
+          if [ ! -s "$REVIEWS_FILE" ]; then
             echo "::warning::Could not fetch reviews for PR #${PR_NUMBER}."
             exit 1
           fi
 
-          REVIEWER_APPROVED=$(echo "${REVIEWS}" | jq -r --arg user "${REQUIRED_REVIEWER}" \
-            '[.[] | select(.user.login == $user)] | last | if .state then .state == "APPROVED" else false end')
+          # jq fails on control chars GitHub sometimes embeds in review bodies.
+          # Use python3 with a base64-encoded script to avoid both the parse
+          # error and the YAML-indentation constraints on multi-line -c code.
+          PY_CHECK='aW1wb3J0IGpzb24sIHJlLCBvcywgc3lzCnJmID0gb3MuZW52aXJvbi5nZXQoIlJFVklFV1NfRklMRSIsICIiKQpydiA9IG9zLmVudmlyb24uZ2V0KCJSRVZJRVdFUiIsICIiKQp0cnk6CiAgICByYXcgPSBvcGVuKHJmLCAicmIiKS5yZWFkKCkKICAgIHJhdyA9IHJlLnN1YihiIltceDAwLVx4MWZdIiwgYiIiLCByYXcpCiAgICByZXZpZXdzID0ganNvbi5sb2FkcyhyYXcpCmV4Y2VwdCBFeGNlcHRpb24gYXMgZToKICAgIHN5cy5zdGRlcnIud3JpdGUoIldhcm5pbmc6ICIgKyBzdHIoZSkgKyAiXG4iKQogICAgcmV2aWV3cyA9IFtdCnJzID0gW3IgZm9yIHIgaW4gcmV2aWV3cyBpZiByLmdldCgidXNlciIsIHt9KS5nZXQoImxvZ2luIikgPT0gcnZdCmxhc3QgPSByc1stMV0gaWYgcnMgZWxzZSBOb25lCnByaW50KCJ0cnVlIiBpZiBsYXN0IGFuZCBsYXN0LmdldCgic3RhdGUiKSA9PSAiQVBQUk9WRUQiIGVsc2UgImZhbHNlIikK'
+          check_approval() {
+            REVIEWER="$1" PY_CHECK="$PY_CHECK" REVIEWS_FILE="$REVIEWS_FILE" python3 -c "import base64,os; exec(base64.b64decode(os.environ['PY_CHECK']).decode())"
+          }
+
+          REVIEWER_APPROVED=$(check_approval "${REQUIRED_REVIEWER}")
 
           echo "${GATE_NAME} (${REQUIRED_REVIEWER}) approved: ${REVIEWER_APPROVED}"
 
           # Fallback: check if CTO approved as alternative for uat→main
           if [ "${REVIEWER_APPROVED}" != "true" ] && [ -n "${ALT_REVIEWER}" ]; then
-            REVIEWER_APPROVED=$(echo "${REVIEWS}" | jq -r --arg user "${ALT_REVIEWER}" \
-              '[.[] | select(.user.login == $user)] | last | if .state then .state == "APPROVED" else false end')
+            REVIEWER_APPROVED=$(check_approval "${ALT_REVIEWER}")
             if [ "${REVIEWER_APPROVED}" = "true" ]; then
               echo "CTO (${ALT_REVIEWER}) approved as fallback for UAT gate."
             fi

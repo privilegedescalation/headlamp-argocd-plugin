@@ -12,7 +12,7 @@ import {
 import { Link } from "react-router-dom";
 import React, { useEffect, useState } from "react";
 import { ArgoCDApplication, ArgoCDApplicationsList } from "../api/argocd";
-import { useArgoCDConfig } from "../config";
+import { buildArgoCDProxyPath, useArgoCDConfig } from "../config";
 import {
   healthStatusToColor,
   healthStatusToLabel,
@@ -22,10 +22,11 @@ import {
 // --- API ---
 
 async function fetchApplications(
-  namespace: string
+  proxyPath: string
 ): Promise<ArgoCDApplicationsList> {
-  const path = `/api/v1/namespaces/${namespace}/services/argocd-server/proxy/api/v1/applications`;
-  const response = (await ApiProxy.request(path)) as ArgoCDApplicationsList;
+  const response = (await ApiProxy.request(
+    proxyPath
+  )) as ArgoCDApplicationsList;
   return response;
 }
 
@@ -34,14 +35,14 @@ async function fetchApplications(
 function NamespaceArgoSection({ resource }: { resource: KubeObject }) {
   const namespaceName = resource.metadata.name;
   const getConfig = useArgoCDConfig();
-  const argocdNamespace = getConfig().namespace;
+  const proxyPath = buildArgoCDProxyPath(getConfig());
   const [apps, setApps] = useState<ArgoCDApplication[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    fetchApplications(argocdNamespace)
+    fetchApplications(proxyPath)
       .then((data) => {
         if (cancelled) return;
         const matched = (data.items ?? []).filter(
@@ -58,7 +59,7 @@ function NamespaceArgoSection({ resource }: { resource: KubeObject }) {
     return () => {
       cancelled = true;
     };
-  }, [namespaceName, argocdNamespace]);
+  }, [namespaceName, proxyPath]);
 
   if (loading) {
     return (
@@ -132,14 +133,14 @@ function NamespaceArgoSection({ resource }: { resource: KubeObject }) {
 function DeploymentArgoBadge({ resource }: { resource: KubeObject }) {
   const deploymentName = resource.metadata.name;
   const getConfig = useArgoCDConfig();
-  const argocdNamespace = getConfig().namespace;
+  const proxyPath = buildArgoCDProxyPath(getConfig());
   const [apps, setApps] = useState<ArgoCDApplication[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    fetchApplications(argocdNamespace)
+    fetchApplications(proxyPath)
       .then((data) => {
         if (cancelled) return;
         const matched = (data.items ?? []).filter((app) =>
@@ -158,7 +159,7 @@ function DeploymentArgoBadge({ resource }: { resource: KubeObject }) {
     return () => {
       cancelled = true;
     };
-  }, [deploymentName, argocdNamespace]);
+  }, [deploymentName, proxyPath]);
 
   if (loading || error || !apps || apps.length === 0) {
     return null;

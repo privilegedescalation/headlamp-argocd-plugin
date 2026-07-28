@@ -1,91 +1,61 @@
-# UAT Playbook — headlamp-argocd-plugin
+# UAT Playbook — ArgoCD Plugin
 
 Test environment: https://headlamp-uat.animaniacs.farh.net
 
-## Pre-flight
+## Prerequisites
 
-1. Confirm the plugin build under test is deployed (`Settings → Plugins → argocd` lists the plugin version).
-2. Open the browser console (F12) — note any pre-existing errors before testing.
+- Headlamp UAT instance is accessible
+- ArgoCD server is deployed in the `argocd` namespace (or configured namespace)
+- Plugin is installed and enabled in Headlamp UAT
+- Confirm the plugin build under test is deployed (`Settings → Plugins → argocd` lists the plugin version)
+- Open the browser console (F12) — note any pre-existing errors before testing
 
-## Test cases
+## Test Steps
 
-### 1. Fresh-install crash regression
+### Pre-flight: Fresh-install crash regression
 
-**Objective:** Verify the plugin does not crash when no namespace has been saved (fresh install / cleared config).
+| # | Action | Expected Result | Pass/Fail |
+|---|--------|-----------------|-----------|
+| 0a | Clear any saved ArgoCD config: `Settings → Plugins → argocd` — delete the namespace value and save, or use a browser profile with no prior plugin state | Config cleared | |
+| 0b | Navigate to `/c/main/argocd` (the ArgoCD Applications view) | Page renders without a blank screen or error boundary; browser console shows zero plugin-originating JS errors; network tab shows a request to `.../namespaces/argocd/services/...` (default namespace, not `.../namespaces/undefined/...`) | |
 
-**Setup:** Clear any saved ArgoCD config: `Settings → Plugins → argocd` — delete the namespace value and save, or use a browser profile with no prior plugin state.
+### Core functionality
 
-**Steps:**
-1. Navigate to `/c/main/argocd` (the ArgoCD Applications view).
-2. Observe the page renders without a blank screen or error boundary.
+| # | Action | Expected Result | Pass/Fail |
+|---|--------|-----------------|-----------|
+| 1 | Navigate to ArgoCD → Applications | Applications list loads showing ArgoCD applications with health and sync status badges | |
+| 2 | Verify health status badges | Each application row shows a health badge (Healthy/Degraded/Progressing/Missing/Unknown) | |
+| 3 | Verify sync status badges | Each application row shows a sync badge (Synced/OutOfSync/Unknown) | |
+| 4 | Use the filter controls | Filter by health or sync status narrows the list correctly | |
+| 5 | Click an application row | Application detail or navigation loads without error | |
 
-**Pass criteria:**
-- Page renders (even if ArgoCD is not installed — an empty state or error message is acceptable).
-- Browser console shows **zero** plugin-originating JS errors (no `TypeError: Cannot read properties of undefined`).
-- Network tab shows a request to `.../namespaces/argocd/services/argocd-server/...` (default namespace, not `.../namespaces/undefined/...`).
+### Plugin settings — namespace
 
----
+| # | Action | Expected Result | Pass/Fail |
+|---|--------|-----------------|-----------|
+| 6 | Go to `Settings → Plugins → argocd` and set namespace to `argocd-prod`. Save. Navigate to `/c/main/argocd` and open the Network tab | Request path contains `/namespaces/argocd-prod/` (not `/namespaces/argocd/` or `/namespaces/undefined/`) | |
+| 7 | Enter `  argocd-prod  ` (with leading/trailing spaces), save. Check network request | Request uses `/namespaces/argocd-prod/` (whitespace stripped) | |
+| 8 | Navigate to any application detail page and a namespace detail page | All three views (list, detail, namespace page) use the same namespace in their network requests | |
 
-### 2. Default namespace fallback
+### Plugin settings — non-standard ArgoCD installation
 
-**Objective:** Confirm that with no saved config the plugin uses `argocd` as the namespace.
+| # | Action | Expected Result | Pass/Fail |
+|---|--------|-----------------|-----------|
+| 9 | Open `Settings → Plugins → argocd` | Settings panel shows four rows: "ArgoCD namespace", "ArgoCD service name", "ArgoCD service port", "ArgoCD service scheme" | |
+| 10 | Change namespace to `cicd`, save | Applications list and detail views connect to ArgoCD in `cicd` namespace | |
+| 11 | Change service name to `argo-argocd-server` (Helm install convention), save | Applications list loads using the renamed service; detail view also works | |
+| 12 | Change service port to `80` and scheme to `http`, save | Proxy URL uses `http:argo-argocd-server:80`; list and detail views connect correctly | |
+| 13 | Reset all settings to defaults (`argocd`, `argocd-server`, `443`, `https`), save | Plugin connects to standard ArgoCD installation again | |
 
-**Steps:**
-1. Ensure no namespace is saved (see Setup in Test 1).
-2. Navigate to `/c/main/argocd`.
-3. Open the Network tab and filter for `argocd-server`.
+### Consistency check
 
-**Pass criteria:**
-- Request path contains `/namespaces/argocd/` (not `/namespaces/undefined/`).
+| # | Action | Expected Result | Pass/Fail |
+|---|--------|-----------------|-----------|
+| 14 | With non-standard service name configured, click an application in the list | Detail view loads using the same service-proxy path as the list (no CRD API fallback) | |
+| 15 | Navigate to a Namespace page that has ArgoCD apps deployed to it | ArgoCD section shows matching apps using configured service name/port/scheme | |
+| 16 | Navigate to a Deployment page managed by an ArgoCD app | ArgoCD badge appears with correct sync status, using configured settings | |
 
----
-
-### 3. Custom namespace round-trip
-
-**Objective:** Verify a configured namespace is used in all plugin views.
-
-**Steps:**
-1. Go to `Settings → Plugins → argocd` and set namespace to `argocd-prod`. Save.
-2. Navigate to `/c/main/argocd` (ApplicationsList).
-3. Navigate to any application detail page.
-4. Check a namespace detail page (sidebar → Namespaces → any namespace).
-
-**Pass criteria:**
-- Network requests use `/namespaces/argocd-prod/` in all three views.
-- No JS errors in console.
-
----
-
-### 4. Namespace input sanitisation
-
-**Objective:** Confirm leading/trailing whitespace is stripped on save.
-
-**Steps:**
-1. Go to `Settings → Plugins → argocd`.
-2. Enter `  argocd-prod  ` (with leading and trailing spaces). Save.
-3. Navigate to `/c/main/argocd`.
-
-**Pass criteria:**
-- Network request uses `/namespaces/argocd-prod/` (not `/namespaces/%20%20argocd-prod%20%20/`).
-
----
-
-### 5. ApplicationsList renders
-
-**Objective:** Basic smoke test — the Applications list view loads.
-
-**Steps:**
-1. Navigate to `/c/main/argocd`.
-2. Wait for the page to finish loading.
-
-**Pass criteria:**
-- Either a table of applications or an "ArgoCD not found" / empty-state message is rendered.
-- No unhandled React error boundary is shown.
-- Zero plugin JS errors in console.
-
----
-
-### 6. Console error baseline
+### Console error baseline
 
 After all tests, review the console for plugin errors.
 
@@ -93,7 +63,38 @@ After all tests, review the console for plugin errors.
 
 **Not acceptable:** Any `TypeError`, `ReferenceError`, or React error boundary triggered by the plugin code itself.
 
----
+## Pass Criteria
+
+- Applications list loads without errors with default settings
+- Fresh-install renders a page (no crash, no `TypeError: Cannot read properties of undefined`)
+- Health and sync status badges are visible on each row
+- Filter controls function correctly
+- Row click navigates to detail view without error
+- All four settings fields (namespace, service name, port, scheme) are editable and persist
+- Non-standard service name (`argo-argocd-server`) produces working list and detail views
+- Non-standard port and scheme are reflected in the proxy path and produce working connections
+- No hardcoded `argocd-server` or `argocd` namespace in any view
+- Namespace input sanitisation strips whitespace
+
+## Fail Criteria
+
+- Page errors or blank screens
+- Applications list empty when ArgoCD apps exist in the cluster
+- Health/sync badges missing or all showing Unknown
+- Filter controls unresponsive
+- Settings changes do not affect the API path used
+- Detail view uses a different path (CRD API) than the list view
+- Settings panel missing any of the four configuration rows
+- Plugin crashes on fresh install (no saved config)
+
+## Artifacts to Capture
+
+- Screenshot: Applications list with health and sync badges visible
+- Screenshot: Filtered view (at least one filter applied)
+- Screenshot: Settings panel showing all four configuration rows
+- Screenshot: Applications list working with non-standard service name (`argo-argocd-server`)
+- Screenshot: Network tab showing scheme-qualified proxy path (`https:argocd-server:443` or custom equivalent)
+- Console errors (attach screenshot if any browser console errors observed)
 
 ## Sign-off
 
