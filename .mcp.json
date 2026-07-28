@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_TOKEN}"
+      }
+    },
+    "kubernetes": {
+      "type": "sse",
+      "url": "http://localhost:8080/sse"
+    },
+    "flux": {
+      "type": "sse",
+      "url": "http://localhost:8081/sse"
+    },
+    "playwright": {
+      "type": "sse",
+      "url": "http://playwright-privilegedescalation.paperclip.svc.cluster.local:8931/sse"
+    }
+  }
+}
