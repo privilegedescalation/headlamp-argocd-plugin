@@ -114,30 +114,12 @@ jobs:
             exit 1
           fi
 
-          # Use python3 to parse reviews: jq fails on control chars that GitHub
-          # sometimes embeds in review body text (ANSI sequences, etc.).
-          # python3 sanitizes them before parsing so the state check is robust.
+          # jq fails on control chars GitHub sometimes embeds in review bodies.
+          # Use python3 with a base64-encoded script to avoid both the parse
+          # error and the YAML-indentation constraints on multi-line -c code.
+          PY_CHECK='aW1wb3J0IGpzb24sIHJlLCBvcywgc3lzCnJmID0gb3MuZW52aXJvbi5nZXQoIlJFVklFV1NfRklMRSIsICIiKQpydiA9IG9zLmVudmlyb24uZ2V0KCJSRVZJRVdFUiIsICIiKQp0cnk6CiAgICByYXcgPSBvcGVuKHJmLCAicmIiKS5yZWFkKCkKICAgIHJhdyA9IHJlLnN1YihiIltceDAwLVx4MWZdIiwgYiIiLCByYXcpCiAgICByZXZpZXdzID0ganNvbi5sb2FkcyhyYXcpCmV4Y2VwdCBFeGNlcHRpb24gYXMgZToKICAgIHN5cy5zdGRlcnIud3JpdGUoIldhcm5pbmc6ICIgKyBzdHIoZSkgKyAiXG4iKQogICAgcmV2aWV3cyA9IFtdCnJzID0gW3IgZm9yIHIgaW4gcmV2aWV3cyBpZiByLmdldCgidXNlciIsIHt9KS5nZXQoImxvZ2luIikgPT0gcnZdCmxhc3QgPSByc1stMV0gaWYgcnMgZWxzZSBOb25lCnByaW50KCJ0cnVlIiBpZiBsYXN0IGFuZCBsYXN0LmdldCgic3RhdGUiKSA9PSAiQVBQUk9WRUQiIGVsc2UgImZhbHNlIikK'
           check_approval() {
-            local user="$1"
-            python3 - "$REVIEWS_FILE" "$user" <<'PYEOF'
-import json, re, sys
-
-reviews_file, required_reviewer = sys.argv[1], sys.argv[2]
-with open(reviews_file, 'rb') as f:
-    raw = f.read()
-# Escape bare ASCII control chars (U+0000-U+001F) except \t \n \r
-raw = re.sub(b'[\x00-\x08\x0b\x0c\x0e-\x1f]',
-             lambda m: ('\\u%04x' % m.group(0)[0]).encode(), raw)
-try:
-    reviews = json.loads(raw)
-except Exception as e:
-    print(f'parse error: {e}', file=sys.stderr)
-    print('false')
-    sys.exit(0)
-user_reviews = [r for r in reviews if r.get('user', {}).get('login') == required_reviewer]
-last = user_reviews[-1] if user_reviews else None
-print('true' if last and last.get('state') == 'APPROVED' else 'false')
-PYEOF
+            REVIEWER="$1" python3 -c "import base64,os; exec(base64.b64decode(os.environ['PY_CHECK']).decode())"
           }
 
           REVIEWER_APPROVED=$(check_approval "${REQUIRED_REVIEWER}")
