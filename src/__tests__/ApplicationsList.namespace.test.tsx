@@ -91,7 +91,7 @@ describe("ApplicationsList uses configured namespace", () => {
     const calledPath = vi.mocked(ApiProxy.request).mock.calls[0]?.[0] as string;
     expect(calledPath).toContain("/api/v1/namespaces/custom-argo/");
     expect(calledPath).toContain(
-      "/services/argocd-server/proxy/api/v1/applications"
+      "/services/https:argocd-server:443/proxy/api/v1/applications"
     );
     expect(calledPath).not.toContain("/api/v1/namespaces/argocd/");
   });
