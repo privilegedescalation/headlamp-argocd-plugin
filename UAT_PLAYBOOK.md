@@ -2,6 +2,21 @@
 
 Test environment: https://headlamp-uat.animaniacs.farh.net
 
+## Authentication (PRI-1951)
+
+`headlamp-uat` requires sign-in before any step below can run. The login page (`/c/main/token`) offers two options:
+
+- **Sign In (OIDC via authentik → Google)** — requires an interactive human account. Not usable by an automated UAT session.
+- **Use A Token** — accepts a Kubernetes bearer token for the `animaniacs.farh.net` cluster.
+
+For automated UAT sessions, use the dedicated `headlamp-uat-reader` ServiceAccount token:
+
+- A short-lived (~1h) token is minted per-session and injected into the env var `HEADLAMP_UAT_READER_TOKEN`. Read it from the environment only — never hardcode, echo, log, or commit the value, matching the `.mcp.json` env-var pattern from PRI-1937.
+- Paste the value of `$HEADLAMP_UAT_READER_TOKEN` into the "Use A Token" field and submit.
+- If the env var is unset or empty, no credential has been injected for this session — stop and flag the blocker. Do not fall back to any other mounted ServiceAccount token (e.g. the agent's own `paperclip-app` token); that token belongs to a different cluster/namespace and pasting it here is an out-of-scope credential use.
+- This token grants `get` on `services/proxy` (resourceNames `argocd-server` and `https:argocd-server:443`) and `get` on `services` (resourceName `argocd-server`), all in the `argocd` namespace only. For the `services/proxy` subresource, Kubernetes matches `resourceNames` against the literal path segment the plugin builds — `<scheme>:<service>:<port>`, i.e. `https:argocd-server:443` for the default config — so that scheme-qualified form must be present; the bare `argocd-server` is retained alongside it per the PRI-1956 dual-resourceName fix. See the `headlamp-uat-reader` Role/RoleBinding for the full grant (PRI-1951).
+- **403 triage:** A 403 on the *configured* service proxy path (whichever namespace/service/port the test step targets) is a real failure — report it, do not mark it passing. A 403 on an unrelated cluster resource the plugin does not use (CRDs, node metrics, etc.) is an expected infrastructure gap and is not a plugin bug. **Note on the non-default configurability steps (10–12, 14–16):** those steps point the plugin at non-default targets (`cicd` namespace, `http:argo-argocd-server:80`); if the `headlamp-uat-reader` token is scoped only to `argocd/https:argocd-server:443`, those steps will 403 — this is a token scope gap, not a plugin bug, but the configurability feature (PRI-1932) cannot be fully validated without a token that covers those targets. (Step 13 resets to defaults, which the default-scoped token *does* cover, so it should not 403.)
+
 ## Prerequisites
 
 - Headlamp UAT instance is accessible
