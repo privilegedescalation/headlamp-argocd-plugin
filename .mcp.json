@@ -17,7 +17,7 @@
     },
     "playwright": {
       "type": "sse",
-      "url": "http://playwright-privilegedescalation.paperclip.svc.cluster.local:8931/sse"
+      "url": "http://${PLAYWRIGHT_PRIVILEGEDESCALATION_SERVICE_HOST}:${PLAYWRIGHT_PRIVILEGEDESCALATION_SERVICE_PORT}/sse"
     }
   }
 }
