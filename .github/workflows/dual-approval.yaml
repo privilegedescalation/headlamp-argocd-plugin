@@ -114,17 +114,39 @@ jobs:
             exit 1
           fi
 
-          REVIEWER_APPROVED=$(jq -r --arg user "${REQUIRED_REVIEWER}" \
-            '[.[] | select(.user.login == $user)] | last | if .state then .state == "APPROVED" else false end' \
-            "$REVIEWS_FILE")
+          # Use python3 to parse reviews: jq fails on control chars that GitHub
+          # sometimes embeds in review body text (ANSI sequences, etc.).
+          # python3 sanitizes them before parsing so the state check is robust.
+          check_approval() {
+            local user="$1"
+            python3 - "$REVIEWS_FILE" "$user" <<'PYEOF'
+import json, re, sys
+
+reviews_file, required_reviewer = sys.argv[1], sys.argv[2]
+with open(reviews_file, 'rb') as f:
+    raw = f.read()
+# Escape bare ASCII control chars (U+0000-U+001F) except \t \n \r
+raw = re.sub(b'[\x00-\x08\x0b\x0c\x0e-\x1f]',
+             lambda m: ('\\u%04x' % m.group(0)[0]).encode(), raw)
+try:
+    reviews = json.loads(raw)
+except Exception as e:
+    print(f'parse error: {e}', file=sys.stderr)
+    print('false')
+    sys.exit(0)
+user_reviews = [r for r in reviews if r.get('user', {}).get('login') == required_reviewer]
+last = user_reviews[-1] if user_reviews else None
+print('true' if last and last.get('state') == 'APPROVED' else 'false')
+PYEOF
+          }
+
+          REVIEWER_APPROVED=$(check_approval "${REQUIRED_REVIEWER}")
 
           echo "${GATE_NAME} (${REQUIRED_REVIEWER}) approved: ${REVIEWER_APPROVED}"
 
           # Fallback: check if CTO approved as alternative for uat→main
           if [ "${REVIEWER_APPROVED}" != "true" ] && [ -n "${ALT_REVIEWER}" ]; then
-            REVIEWER_APPROVED=$(jq -r --arg user "${ALT_REVIEWER}" \
-              '[.[] | select(.user.login == $user)] | last | if .state then .state == "APPROVED" else false end' \
-              "$REVIEWS_FILE")
+            REVIEWER_APPROVED=$(check_approval "${ALT_REVIEWER}")
             if [ "${REVIEWER_APPROVED}" = "true" ]; then
               echo "CTO (${ALT_REVIEWER}) approved as fallback for UAT gate."
             fi
