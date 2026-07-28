@@ -88,12 +88,13 @@ jobs:
             ALT_REVIEWER="null-pointer-nancy-pe[bot]"
           fi
 
-          PR_DATA=$(curl -sf \
+          PR_DATA_FILE=$(mktemp)
+          curl -sf \
             -H "Authorization: Bearer ${GITHUB_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${REPO}/pulls/${PR_NUMBER}")
+            "https://api.github.com/repos/${REPO}/pulls/${PR_NUMBER}" > "$PR_DATA_FILE"
 
-          PR_AUTHOR=$(echo "${PR_DATA}" | jq -r '.user.login')
+          PR_AUTHOR=$(python3 -c "import json,re,sys; raw=open(sys.argv[1],'rb').read(); raw=re.sub(b'[\x00-\x1f]',b'',raw); print(json.loads(raw).get('user',{}).get('login',''))" "$PR_DATA_FILE")
           echo "PR author: ${PR_AUTHOR}"
 
           # Guard: PR author matches required reviewer — gate cannot be satisfied.
