@@ -120,7 +120,7 @@ jobs:
           # error and the YAML-indentation constraints on multi-line -c code.
           PY_CHECK='aW1wb3J0IGpzb24sIHJlLCBvcywgc3lzCnJmID0gb3MuZW52aXJvbi5nZXQoIlJFVklFV1NfRklMRSIsICIiKQpydiA9IG9zLmVudmlyb24uZ2V0KCJSRVZJRVdFUiIsICIiKQp0cnk6CiAgICByYXcgPSBvcGVuKHJmLCAicmIiKS5yZWFkKCkKICAgIHJhdyA9IHJlLnN1YihiIltceDAwLVx4MWZdIiwgYiIiLCByYXcpCiAgICByZXZpZXdzID0ganNvbi5sb2FkcyhyYXcpCmV4Y2VwdCBFeGNlcHRpb24gYXMgZToKICAgIHN5cy5zdGRlcnIud3JpdGUoIldhcm5pbmc6ICIgKyBzdHIoZSkgKyAiXG4iKQogICAgcmV2aWV3cyA9IFtdCnJzID0gW3IgZm9yIHIgaW4gcmV2aWV3cyBpZiByLmdldCgidXNlciIsIHt9KS5nZXQoImxvZ2luIikgPT0gcnZdCmxhc3QgPSByc1stMV0gaWYgcnMgZWxzZSBOb25lCnByaW50KCJ0cnVlIiBpZiBsYXN0IGFuZCBsYXN0LmdldCgic3RhdGUiKSA9PSAiQVBQUk9WRUQiIGVsc2UgImZhbHNlIikK'
           check_approval() {
-            REVIEWER="$1" python3 -c "import base64,os; exec(base64.b64decode(os.environ['PY_CHECK']).decode())"
+            REVIEWER="$1" PY_CHECK="$PY_CHECK" REVIEWS_FILE="$REVIEWS_FILE" python3 -c "import base64,os; exec(base64.b64decode(os.environ['PY_CHECK']).decode())"
           }
 
           REVIEWER_APPROVED=$(check_approval "${REQUIRED_REVIEWER}")
