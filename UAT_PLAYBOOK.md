@@ -2,6 +2,20 @@
 
 Test environment: https://headlamp-uat.animaniacs.farh.net
 
+## Authentication (PRI-1951)
+
+`headlamp-uat` requires sign-in before any step below can run. The login page (`/c/main/token`) offers two options:
+
+- **Sign In (OIDC via authentik → Google)** — requires an interactive human account. Not usable by an automated UAT session.
+- **Use A Token** — accepts a Kubernetes bearer token for the `animaniacs.farh.net` cluster.
+
+For automated UAT sessions, use the dedicated `headlamp-uat-reader` ServiceAccount token:
+
+- A short-lived (~1h) token is minted per-session and injected into the env var `HEADLAMP_UAT_READER_TOKEN`. Read it from the environment only — never hardcode, echo, log, or commit the value, matching the `.mcp.json` env-var pattern from PRI-1937.
+- Paste the value of `$HEADLAMP_UAT_READER_TOKEN` into the "Use A Token" field and submit.
+- If the env var is unset or empty, no credential has been injected for this session — stop and flag the blocker. Do not fall back to any other mounted ServiceAccount token (e.g. the agent's own `paperclip-app` token); that token belongs to a different cluster/namespace and pasting it here is an out-of-scope credential use.
+- This token is scoped to `get`/`list` on `services/proxy`, resource name `argocd-server`, in the `argocd` namespace only (see `headlamp-uat-reader` Role/RoleBinding, PRI-1951). 403s on any other resource are expected and are not a plugin bug.
+
 ## Prerequisites
 
 - Headlamp UAT instance is accessible
