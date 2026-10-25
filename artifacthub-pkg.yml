@@ -6,6 +6,7 @@ description: >-
   Headlamp plugin for ArgoCD visibility. Monitors ArgoCD Applications,
   Rollouts, and health status. Read-only — no cluster write operations.
 license: Apache-2.0
+deprecated: true
 homeURL: https://github.com/privilegedescalation/headlamp-argocd-plugin
 appVersion: "0.1.0"
 keywords:
